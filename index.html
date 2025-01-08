@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rama IA - Generación de Sentencia</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <style>
+    .card-header-custom {
+      background-color: #f5f5f5;
+      font-weight: bold;
+    }
+    .btn-accept {
+      background-color: #198754; /* verde bootstrap */
+      color: white;
+    }
+    .btn-reject {
+      background-color: #dc3545; /* rojo bootstrap */
+      color: white;
+    }
+  </style>
+</head>
+<body class="bg-light">
+
+<div class="container py-4">
+  <h1 class="text-center mb-4">Rama IA</h1>
+  
+  <!-- Ingresar CUIP -->
+  <div class="card mb-4">
+    <div class="card-header card-header-custom">
+      Ingresar Información del Caso
+    </div>
+    <div class="card-body">
+      <div class="mb-3">
+        <label for="proceso_id" class="form-label">ID del Proceso (CUIP):</label>
+        <input 
+          type="text" 
+          class="form-control" 
+          id="proceso_id" 
+          name="proceso_id" 
+          placeholder="Ej: 050013105017-20240004001" 
+          required
+        />
+      </div>
+      <button id="btnBuscarDocumento" class="btn btn-primary btn-lg">Consultar Documento</button>
+    </div>
+  </div>
+
+  <!-- Lista de preguntas -->
+  <div class="card mb-4">
+    <div class="card-header card-header-custom">
+      Selección de Pregunta
+    </div>
+    <div class="card-body">
+      <form id="formPreguntas">
+        <label for="pregunta" class="form-label">Seleccione una pregunta:</label>
+        <select class="form-select" id="pregunta" name="pregunta" required>
+          <option value="hechos">¿Cuáles son los hechos principales del caso?</option>
+          <option value="demanda">¿Qué tipo de demanda está siendo tratada?</option>
+          <option value="precedentes">¿Existen precedentes legales relevantes?</option>
+          <option value="criterios">¿Qué criterios debe cumplir la sentencia?</option>
+        </select>
+        <button id="btnGenerarSentencia" type="button" class="btn btn-success btn-lg mt-3">Generar SUGERENCIA Sentencia</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Resultado -->
+  <div class="card mb-4">
+    <div class="card-header card-header-custom">Sugerencia Sentencia Generada</div>
+    <div class="card-body">
+      <h5>Sugerencia Sentencia:</h5>
+      <div id="sentenciaResultado" class="p-3 bg-white border mb-3" style="min-height: 150px;"></div>
+
+      <h5>Posibles Artículos Invocados:</h5>
+      <div id="articulosInvocados" class="p-3 bg-white border mb-3" style="min-height: 80px;"></div>
+
+      <!-- Aceptación/Rechazo -->
+      <div class="d-flex align-items-center mb-2">
+        <button id="btnAceptar" class="btn btn-accept me-2">Aceptar Sugerencia</button>
+        <button id="btnRechazar" class="btn btn-reject">Rechazar Sugerencia</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const btnBuscarDocumento = document.getElementById('btnBuscarDocumento');
+  const btnGenerarSentencia = document.getElementById('btnGenerarSentencia');
+  const btnAceptar = document.getElementById('btnAceptar');
+  const btnRechazar = document.getElementById('btnRechazar');
+  const procesoIdInput = document.getElementById('proceso_id');
+  const documentoInfo = document.getElementById('documentoInfo');
+  const preguntaSelect = document.getElementById('pregunta');
+  const sentenciaResultado = document.getElementById('sentenciaResultado');
+  const articulosInvocados = document.getElementById('articulosInvocados');
+
+  let documento = {};
+
+  // Consultar Documento
+  btnBuscarDocumento.addEventListener('click', async () => {
+    const procesoId = procesoIdInput.value.trim();
+    if (!procesoId) {
+      alert('Por favor, ingrese el ID del Proceso.');
+      return;
+    }
+
+    try {
+      // const response = await fetch('/api/documento', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ cuip: procesoId })
+      // });
+      const response = await fetch('http://127.0.0.1:8000/api/documento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cuip: procesoId })
+      });
+
+      const data = await response.json();
+      if (data.nombre && data.ruta) {
+        documento = data;
+        documentoInfo.textContent = `Documento: ${data.nombre}`;
+      } else {
+        alert('No se encontró un documento para este CUIP.');
+      }
+    } catch (error) {
+      console.error('Error al consultar el documento:', error);
+    }
+  });
+
+  // Generar Sentencia
+  btnGenerarSentencia.addEventListener('click', async () => {
+    if (!documento.nombre || !documento.ruta) {
+      alert('Debe consultar primero un documento válido.');
+      return;
+    }
+
+    const preguntaSeleccionada = preguntaSelect.value;
+    try {
+      // const response = await fetch('/api/sentencia', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     cuip: procesoIdInput.value.trim(),
+      //     documento: documento,
+      //     pregunta: preguntaSeleccionada
+      //   })
+      // });
+      const response = await fetch('http://127.0.0.1:8000/api/sentencia', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cuip: procesoIdInput.value.trim(),
+          documento: documento,
+          pregunta: preguntaSeleccionada
+        })
+      });
+
+
+
+      const data = await response.json();
+      sentenciaResultado.textContent = data.sentencia || 'No se generó ninguna sentencia.';
+      articulosInvocados.textContent = data.articulos || 'No se encontraron artículos invocados.';
+    } catch (error) {
+      console.error('Error al generar la sentencia:', error);
+    }
+  });
+
+  // Aceptar o Rechazar Sentencia
+  btnAceptar.addEventListener('click', () => alert('Has aceptado la sentencia.'));
+  btnRechazar.addEventListener('click', () => alert('Has rechazado la sentencia.'));
+</script>
+
+</body>
+</html>
